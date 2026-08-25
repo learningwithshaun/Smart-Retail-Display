@@ -1,0 +1,17 @@
+[Unit]
+Description=Smart Retail Chromium Kiosk
+After=graphical.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+Environment=DISPLAY=:0
+Environment=DISPLAY_URL=http://127.0.0.1:8000
+ExecStart=/home/pi/Smart-Retail-Display/kiosk/start-kiosk.sh
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=graphical.target
+
