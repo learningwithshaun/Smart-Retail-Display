@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#08142c">
+    <title>Smart Retail Display</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <main class="signage" aria-live="polite">
+      <section id="media-stage" class="stage" aria-label="Retail promotion">
+        <img id="image-media" class="media hidden" alt="">
+        <video id="video-media" class="media hidden" muted playsinline></video>
+        <div id="empty-state" class="empty-state hidden">
+          <p class="eyebrow">SMART RETAIL</p>
+          <h1>Fresh offers are on their way.</h1>
+          <p>Please check back shortly.</p>
+        </div>
+        <div id="caption" class="caption hidden">
+          <p id="caption-business" class="caption-business"></p>
+          <p id="caption-name" class="caption-name"></p>
+        </div>
+        <aside id="payment-overlay" class="payment-overlay hidden" aria-label="Payment QR code">
+          <div id="qr-code" class="qr-code"></div><p>Scan to pay</p>
+        </div>
+      </section>
+      <section id="youtube-stage" class="stage hidden" aria-label="Entertainment">
+        <iframe id="youtube-player" title="Entertainment playlist" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+        <div class="entertainment-label">ENTERTAINMENT</div>
+      </section>
+      <div class="brand">SMART<span>RETAIL</span></div>
+      <div class="progress"><span id="progress-bar"></span></div>
+    </main>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,10 @@
+{
+  "media": [
+    {"id":"media_001","business_id":"business_001","business_name":"Amanda Cosmetics","type":"product","name":"Premium Lipstick Collection","media_type":"image","media_url":"https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=1920&q=85","paystack_url":"https://paystack.com/pay/lipstick-001","payment_status":"paid","play_count":2,"status":"active"},
+    {"id":"media_002","business_id":"business_002","business_name":"Glow Studio","type":"product","name":"Beauty in Motion","media_type":"video","media_url":"https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4","paystack_url":"https://paystack.com/pay/glow-studio-002","payment_status":"paid","play_count":1,"status":"active"},
+    {"id":"media_unpaid","business_id":"business_003","business_name":"Pending Retailer","type":"product","name":"This will not be displayed","media_type":"image","media_url":"https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1920&q=85","paystack_url":"https://paystack.com/pay/pending-003","payment_status":"pending","play_count":1,"status":"active"}
+  ],
+  "youtube_playlist_id": "PLFgquLnL59alCl_2TQvOiD5Vgm1hCaGSI",
+  "ad_duration_seconds": 30,
+  "youtube_duration_minutes": 10
+}
