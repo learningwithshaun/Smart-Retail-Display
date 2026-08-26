@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: smart-retail-display
+    runtime: docker
+    plan: free
+    envVars:
+      - key: GPIO_MODE
+        value: mock
+      - key: UNLOCK_DURATION_SECONDS
+        value: "5"
+      - key: PAYSTACK_SECRET_KEY
+        generateValue: true # Or user can set it manually
