@@ -208,7 +208,14 @@
       const create = () => {
         ytPlayer = new window.YT.Player(elements.player, {
           width: "100%", height: "100%",
-          playerVars: { autoplay: 1, mute: 1, playsinline: 1, rel: 0 },
+          playerVars: { 
+            autoplay: 1, 
+            mute: 1, 
+            playsinline: 1, 
+            rel: 0, 
+            modestbranding: 1,
+            origin: window.location.origin 
+          },
           events: { onReady: () => { ytReady = true; resolve(ytPlayer); }, onError: () => { ytReady = true; resolve(ytPlayer); } }
         });
       };

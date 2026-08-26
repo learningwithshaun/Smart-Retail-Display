@@ -35,9 +35,9 @@ body { margin: 0; min-width: 320px; overflow: hidden; font-family: 'Hanken Grote
   width: 25vw;
   height: 25vh;
   left: auto;
-  top: auto;
+  top: 50%;
   right: 4vw;
-  bottom: 12vh; /* Above the progress bar and somewhat clear of the QR code if possible */
+  transform: translateY(-50%);
   z-index: 10;
   border-radius: 12px;
   overflow: hidden;
