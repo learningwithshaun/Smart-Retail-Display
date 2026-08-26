@@ -17,12 +17,43 @@
     qrCode: document.querySelector("#qr-code"),
     player: document.querySelector("#youtube-player"),
     progress: document.querySelector("#progress-bar"),
-    brandBar: document.querySelector("#brandBar")
+    brandBar: document.querySelector("#brandBar"),
+    masterMute: document.querySelector("#master-mute"),
+    muteIconOn: document.querySelector("#mute-icon-on"),
+    muteIconOff: document.querySelector("#mute-icon-off")
   };
 
   let timeoutId, playlist = [], index = 0, config = { ...DEFAULTS };
   let store = { content: null, hasZuke: false };
-  let ytPlayer = null, ytReady = false;
+  let ytPlayer = null, ytReady = false, masterMuted = localStorage.getItem("masterMuted") === "true";
+
+  function updateMuteUI() {
+    if (masterMuted) {
+      elements.muteIconOn.classList.remove("hidden");
+      elements.muteIconOff.classList.add("hidden");
+    } else {
+      elements.muteIconOn.classList.add("hidden");
+      elements.muteIconOff.classList.remove("hidden");
+    }
+  }
+  updateMuteUI();
+
+  elements.masterMute.addEventListener("click", () => {
+    masterMuted = !masterMuted;
+    localStorage.setItem("masterMuted", masterMuted);
+    updateMuteUI();
+    // Immediate apply
+    if (ytPlayer && typeof ytPlayer.mute === "function") {
+      if (masterMuted) ytPlayer.mute();
+      else if (!elements.youtubeStage.classList.contains("mini") || (playlist[index] && playlist[index].media_type === "image")) {
+        ytPlayer.unMute();
+      }
+    }
+    if (elements.video) {
+      if (masterMuted) elements.video.muted = true;
+      else if (!elements.video.classList.contains("hidden")) elements.video.muted = false;
+    }
+  });
 
   const esc = (v) => String(v == null ? "" : v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   const validUrl = (value) => { try { new URL(value); return true; } catch (e) { return false; } };
@@ -74,12 +105,21 @@
     startCycle();
   }
 
-  function hideMedia() { elements.image.classList.add("hidden"); elements.video.classList.add("hidden"); elements.video.pause(); }
+  function hideMedia() {
+    elements.image.classList.remove("image-zoom");
+    elements.image.classList.add("hidden");
+    elements.video.classList.add("hidden");
+    elements.video.pause();
+    elements.video.muted = true;
+  }
   function schedule(next, duration) {
     clearTimeout(timeoutId);
     elements.progress.style.transition = "none";
     elements.progress.style.width = "0";
-    requestAnimationFrame(() => { elements.progress.style.transition = "width " + duration + "ms linear"; elements.progress.style.width = "100%"; });
+    requestAnimationFrame(() => {
+      elements.progress.style.transition = "width " + duration + "ms linear";
+      elements.progress.style.width = "100%";
+    });
     timeoutId = setTimeout(next, duration);
   }
   function renderQr(url) {
@@ -89,20 +129,19 @@
 
   function showEmpty() {
     renderBrand(null);
-    elements.youtubeStage.classList.add("hidden");
-    elements.mediaStage.classList.remove("hidden");
-    hideMedia();
-    elements.caption.classList.add("hidden");
-    elements.payment.classList.add("hidden");
-    elements.empty.classList.remove("hidden");
-    schedule(startCycle, config.adDurationMs);
+    // When empty, we show YouTube full screen as entertainment
+    startEntertainment();
   }
 
   function showAd() {
     if (!playlist.length) return showEmpty();
     const ad = playlist[index];
     renderBrand(ad);
-    elements.youtubeStage.classList.add("hidden");
+
+    // Keep YouTube stage visible but in mini mode
+    elements.youtubeStage.classList.remove("hidden");
+    elements.youtubeStage.classList.add("mini");
+
     elements.mediaStage.classList.remove("hidden");
     elements.empty.classList.add("hidden");
     elements.caption.classList.remove("hidden");
@@ -117,13 +156,18 @@
       elements.video.classList.remove("hidden");
       elements.video.src = ad.media_url;
       elements.video.load();
-      elements.video.play().catch(() => console.warn("Video autoplay was blocked"));
+      // If it's a video ad, we unmute it (if not master muted) and mute YouTube
+      elements.video.muted = masterMuted;
+      elements.video.play().catch(() => {
+        console.warn("Video autoplay was blocked, muting to retry");
+        elements.video.muted = true;
+        elements.video.play();
+      });
     } else {
-      // Detect image aspect ratio on load: if the image is squarer (or taller)
-      // than the 16:9 screen, show it fully with `contain` so it is never
-      // stretched or badly cropped; wide/landscape images use `cover`.
       elements.video.removeAttribute("src");
       elements.image.classList.remove("hidden");
+      elements.image.classList.add("image-zoom");
+      elements.image.style.animationDuration = config.adDurationMs + "ms";
       elements.image.onload = function onImgLoad() {
         const ratio = (elements.image.naturalWidth && elements.image.naturalHeight) ? elements.image.naturalWidth / elements.image.naturalHeight : 1;
         elements.image.classList.toggle("contain", ratio < 1.6);
@@ -131,6 +175,14 @@
       };
       elements.image.src = ad.media_url;
     }
+
+    // Handle YouTube playback and muting
+    ensureYTPlaying().then(() => {
+      if (ytPlayer && typeof ytPlayer.mute === "function") {
+        if (masterMuted || ad.media_type === "video") ytPlayer.mute();
+        else ytPlayer.unMute();
+      }
+    });
 
     const proceed = () => { index += 1; index < playlist.length ? showAd() : startEntertainment(); };
     const target = ad.media_type === "video" ? elements.video : elements.image;
@@ -192,28 +244,55 @@
     }).catch(() => playPlaylist(ids[Math.floor(Math.random() * ids.length)]));
   }
 
-  function hideYouTube() { if (ytPlayer && ytPlayer.stopVideo) { try { ytPlayer.stopVideo(); } catch (e) {} } }
+  function ensureYTPlaying() {
+    return ensureYTPlayer().then(() => {
+      if (!ytPlayer || typeof ytPlayer.getPlayerState !== "function") return;
+      const state = ytPlayer.getPlayerState();
+      // If NOT playing (1) and NOT buffering (3), start playing.
+      if (state !== 1 && state !== 3) {
+        const ids = playlistIds();
+        if (ids.length) {
+          playPlaylist(ids[Math.floor(Math.random() * ids.length)]);
+        }
+      }
+    }).catch(() => {});
+  }
+
+  function hideYouTube() {
+    // We don't really hide it anymore, but we can stop it if needed.
+    // However, the requirement is to "keep playing".
+  }
 
   function startEntertainment() {
     const ids = playlistIds();
     hideMedia();
     elements.mediaStage.classList.add("hidden");
     elements.payment.classList.add("hidden");
+
+    // Transition YouTube to full screen
     elements.youtubeStage.classList.remove("hidden");
+    elements.youtubeStage.classList.remove("mini");
     renderBrand(null);
-    if (!ids.length) { schedule(startCycle, 60_000); return; }
+
     ensureYTPlayer().then(() => {
-      if (config.shuffle && window.YOUTUBE_API_KEY) return playShuffled(ids);
-      playPlaylist(ids[Math.floor(Math.random() * ids.length)]);
+      if (masterMuted) ytPlayer.mute();
+      else if (ytPlayer.unMute) ytPlayer.unMute();
+      
+      const state = ytPlayer.getPlayerState();
+      if (state !== 1 && state !== 3) {
+        if (config.shuffle && window.YOUTUBE_API_KEY) return playShuffled(ids);
+        if (ids.length) playPlaylist(ids[Math.floor(Math.random() * ids.length)]);
+      }
       return undefined;
     }).catch(() => {});
+
     schedule(startCycle, config.youtubeDurationMs);
   }
 
   async function startCycle() {
     clearTimeout(timeoutId);
     index = 0;
-    if (elements.youtubeStage && !elements.youtubeStage.classList.contains("hidden")) hideYouTube();
+    // Don't hide YouTube here, just load media and show ads
     await loadMedia();
     showAd();
   }
