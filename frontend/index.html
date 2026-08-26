@@ -3,12 +3,18 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#08142c">
+    <meta name="theme-color" content="#0a0f1e">
     <title>Smart Retail Display</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
   </head>
   <body>
     <main class="signage" aria-live="polite">
+      <!-- Zuke × business brand bar (filled by app.js with the active ad's business) -->
+      <div id="brandBar" class="brand-bar"></div>
+
       <section id="media-stage" class="stage" aria-label="Retail promotion">
         <img id="image-media" class="media hidden" alt="">
         <video id="video-media" class="media hidden" muted playsinline></video>
@@ -26,10 +32,10 @@
         </div>
       </section>
       <section id="youtube-stage" class="stage hidden" aria-label="Entertainment">
-        <iframe id="youtube-player" title="Entertainment playlist" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
-        <div class="entertainment-label">ENTERTAINMENT</div>
+        <div id="youtube-player"></div>
+        <div class="entertainment-label">NOW PLAYING · YOUTUBE</div>
       </section>
-      <div class="brand">SMART<span>RETAIL</span></div>
+
       <div class="progress"><span id="progress-bar"></span></div>
     </main>
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>

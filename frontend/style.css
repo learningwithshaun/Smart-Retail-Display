@@ -1,23 +1,43 @@
-:root { color-scheme: dark; font-family: Arial, Helvetica, sans-serif; background: #08142c; }
+:root { color-scheme: dark; font-family: 'Hanken Grotesk', Arial, sans-serif; background: #0a0f1e; --zuke: #ff8b00; --zuke-deep: #ff7b00; --text: #f4f6fb; --muted: #9aa7c7; }
 * { box-sizing: border-box; }
-body { margin: 0; min-width: 320px; overflow: hidden; }
+body { margin: 0; min-width: 320px; overflow: hidden; font-family: 'Hanken Grotesk', Arial, sans-serif; }
 .signage, .stage { width: 100vw; height: 100vh; }
-.signage { position: relative; background: #08142c; }
-.stage { position: absolute; inset: 0; background: #08142c; }
-.media, #youtube-player { width: 100%; height: 100%; display: block; border: 0; object-fit: cover; }
-.stage::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg, rgba(4,11,26,.72), transparent 58%), linear-gradient(0deg, rgba(4,11,26,.7), transparent 45%); }
+.signage { position: relative; background: radial-gradient(120% 120% at 20% 0%, #141c33 0%, #0a0f1e 45%, #060a16 100%); }
+.stage { position: absolute; inset: 0; background: transparent; }
+
+/* Ad / video media — image fit is switched at runtime to avoid stretching. */
+.media { width: 100%; height: 100%; display: block; border: 0; object-fit: cover; }
+.media.contain { object-fit: contain; }
+.stage::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg, rgba(6,10,22,.78), transparent 58%), linear-gradient(0deg, rgba(6,10,22,.74), transparent 45%); }
+
+/* ── Brand bar: Zuke logo × business logo/name (top-left) ───────────────── */
+.brand-bar { position: absolute; z-index: 6; top: 3.5vh; left: 4vw; display: flex; align-items: center; gap: 14px; padding: 10px 18px; background: rgba(6,10,22,.55); border: 1px solid rgba(255,255,255,.08); border-left: 3px solid var(--zuke); border-radius: 14px; backdrop-filter: blur(6px); max-width: 60vw; }
+.brand-bar .brand-zuke { max-height: 34px; width: auto; object-fit: contain; filter: drop-shadow(0 2px 6px rgba(0,0,0,.45)); }
+.brand-bar .brand-sep { color: var(--zuke); font-weight: 800; font-size: 20px; line-height: 1; }
+.brand-bar .brand-biz { max-height: 34px; max-width: 150px; object-fit: contain; background: #fff; padding: 4px 8px; border-radius: 8px; }
+.brand-bar .brand-name { font-size: 18px; font-weight: 700; color: #fff; letter-spacing: .02em; }
+
+/* ── Caption ────────────────────────────────────────────────────────────── */
 .caption { position: absolute; z-index: 1; left: 7vw; bottom: 11vh; max-width: 48vw; text-shadow: 0 2px 12px #000; }
-.caption-business { margin: 0 0 .7rem; color: #45d7b0; font-size: clamp(.85rem, 1.4vw, 1.25rem); font-weight: 700; letter-spacing: .13em; text-transform: uppercase; }
-.caption-name { margin: 0; font-size: clamp(2rem, 5vw, 5.5rem); font-weight: 700; letter-spacing: -.04em; }
-.payment-overlay { position: absolute; z-index: 4; display: grid; place-items: center; gap: .65rem; right: 5vw; bottom: 9vh; min-width: 10rem; padding: 1rem; color: #08142c; background: rgba(255,255,255,.96); border-radius: .8rem; box-shadow: 0 .8rem 2.8rem rgba(0,0,0,.4); }
+.caption-business { margin: 0 0 .7rem; color: var(--zuke); font-size: clamp(.85rem, 1.3vw, 1.25rem); font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
+.caption-name { margin: 0; font-size: clamp(2rem, 5vw, 5.5rem); font-weight: 800; letter-spacing: -.04em; }
+
+/* ── Payment QR overlay ─────────────────────────────────────────────────── */
+.payment-overlay { position: absolute; z-index: 4; display: grid; place-items: center; gap: .65rem; right: 5vw; bottom: 9vh; min-width: 10rem; padding: 1rem; color: #0a0f1e; background: rgba(255,255,255,.97); border-radius: .9rem; box-shadow: 0 .8rem 2.8rem rgba(0,0,0,.45); border-left: 3px solid var(--zuke); }
 .payment-overlay p { margin: 0; font-weight: 700; font-size: 1rem; }.qr-code { width: 140px; height: 140px; background: white; }.qr-code img, .qr-code canvas { display: block; width: 140px !important; height: 140px !important; }
-.brand { position: absolute; z-index: 2; top: 4vh; left: 5vw; font-size: clamp(1rem, 1.8vw, 1.7rem); font-weight: 800; letter-spacing: .12em; }
-.brand span { color: #45d7b0; }
-.progress { position: absolute; z-index: 3; bottom: 0; left: 0; height: 5px; width: 100%; background: rgba(255,255,255,.25); }
-#progress-bar { display: block; height: 100%; width: 0; background: #45d7b0; transition: width 1s linear; }
+
+/* ── YouTube entertainment ──────────────────────────────────────────────── */
+#youtube-player { width: 100%; height: 100%; display: block; border: 0; }
+.entertainment-label { position: absolute; z-index: 2; bottom: 6vh; left: 50%; transform: translateX(-50%); font-size: .95rem; font-weight: 600; letter-spacing: .22em; color: #fff; background: rgba(6,10,22,.6); padding: 10px 20px; border-radius: 999px; border: 1px solid rgba(255,139,0,.35); }
+.entertainment-label::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--zuke); margin-right: 10px; vertical-align: middle; }
+
+/* ── Progress ───────────────────────────────────────────────────────────── */
+.progress { position: absolute; z-index: 3; bottom: 0; left: 0; height: 6px; width: 100%; background: rgba(255,255,255,.18); }
+#progress-bar { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--zuke), var(--zuke-deep)); transition: width 1s linear; }
+
+/* ── Empty state ────────────────────────────────────────────────────────── */
 .empty-state { position: relative; z-index: 1; padding: 12vh 10vw; max-width: 60rem; }
 .empty-state h1 { margin: .25rem 0 1rem; font-size: clamp(2.5rem, 7vw, 7rem); line-height: 1; }
 .empty-state p { font-size: clamp(1.1rem, 2vw, 2rem); color: #d5e1f5; }
-.eyebrow, .entertainment-label { color: #45d7b0; font-weight: 700; letter-spacing: .16em; }
-.entertainment-label { position: absolute; z-index: 2; bottom: 8vh; right: 5vw; font-size: 1rem; }
+.eyebrow { color: var(--zuke); font-weight: 800; letter-spacing: .2em; }
 .hidden { display: none !important; }
