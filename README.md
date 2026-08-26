@@ -153,3 +153,18 @@ docker build -t smart-retail-display .
 docker run -p 8000:8000 -e GPIO_MODE=mock smart-retail-display
 ```
 
+### Deploying to Vercel
+
+The included `vercel.json` deploys the FastAPI application as a Python
+serverless function, including the signage frontend served at `/`.
+
+1. Import the repository into Vercel with the **Root Directory** set to the
+   repository root.
+2. Leave the framework preset as **Other** and do not set an output directory.
+3. Add `PAYSTACK_SECRET_KEY` only if you will use the payment webhook. Set
+   `GPIO_MODE` to `mock` (the default) for Vercel.
+4. Redeploy the project after pushing these files.
+
+Vercel serverless functions are intended for the display API and web UI. The
+physical GPIO controller is not available in that environment.
+
