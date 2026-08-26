@@ -117,3 +117,39 @@ The suite covers media filtering/configuration fallback, webhook signature valid
 ## Environment and hardware note
 
 Keep `GPIO_MODE=mock` on a normal computer. The physical GPIO and Paystack webhook paths are retained from the earlier shelf prototype but are not required for the current display MVP. Do not commit `.env` or place secrets in `media.json`.
+## Deployment
+
+### Deploying to Render
+
+This project is ready to be deployed to [Render](https://render.com/).
+
+#### Option 1: Using the Render Blueprint (Easiest)
+
+1. Fork this repository to your GitHub account.
+2. Log in to Render and click **New** > **Blueprint**.
+3. Connect your fork.
+4. Render will automatically detect the `render.yaml` file and configure the service.
+5. Set your `PAYSTACK_SECRET_KEY` in the Render dashboard environment variables.
+
+#### Option 2: Manual Deployment
+
+1. Create a new **Web Service** on Render.
+2. Connect your repository.
+3. Select **Docker** as the runtime.
+4. Render will use the included `Dockerfile`.
+5. Add the following environment variables:
+   - `GPIO_MODE`: `mock`
+   - `UNLOCK_DURATION_SECONDS`: `5`
+   - `PAYSTACK_SECRET_KEY`: Your secret key from Paystack.
+
+The application will be available at your Render URL (e.g., `https://smart-retail-display.onrender.com`).
+
+### Manual Docker Deployment
+
+If you want to run the container locally or on another cloud provider:
+
+```bash
+docker build -t smart-retail-display .
+docker run -p 8000:8000 -e GPIO_MODE=mock smart-retail-display
+```
+
