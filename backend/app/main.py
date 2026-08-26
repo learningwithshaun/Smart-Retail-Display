@@ -1,6 +1,7 @@
 import logging
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from hardware.gpio_controller import RealGPIOController
@@ -18,6 +19,20 @@ def create_app(controller=None) -> FastAPI:
     if controller is None:
         controller = RealGPIOController() if settings.GPIO_MODE == "real" else MockGPIOController()
     app = FastAPI(title="Smart Retail Display API", version="0.1.0")
+    
+    # Enable CORS for zuke domains
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[
+            "https://app.zuke.co.za",
+            "https://zuke.co.za",
+            "http://localhost:3000", # Common for local dashboard development
+        ],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
     app.state.shelf_service = ShelfService(controller, settings.UNLOCK_DURATION_SECONDS)
     app.include_router(media_router)
     app.include_router(build_webhook_router(app.state.shelf_service))
