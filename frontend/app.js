@@ -205,9 +205,16 @@
   function ensureYTPlayer() {
     return new Promise((resolve) => {
       if (ytReady && ytPlayer) return resolve(ytPlayer);
+      
       const create = () => {
-        // Clear previous content to avoid iframe conflicts
+        if (ytPlayer && typeof ytPlayer.destroy === "function") {
+          try { ytPlayer.destroy(); } catch (e) {}
+        }
         elements.player.innerHTML = "";
+        
+        // Use the safest possible origin: no trailing slashes, exact protocol
+        const origin = window.location.protocol + "//" + window.location.hostname + (window.location.port ? ":" + window.location.port : "");
+        
         ytPlayer = new window.YT.Player(elements.player, {
           width: "100%", height: "100%",
           playerVars: { 
@@ -217,8 +224,7 @@
             rel: 0, 
             modestbranding: 1,
             enablejsapi: 1,
-            origin: window.location.origin,
-            widget_referrer: window.location.href
+            origin: origin
           },
           events: { 
             onReady: () => { 
@@ -226,20 +232,31 @@
               resolve(ytPlayer); 
             }, 
             onError: (e) => { 
-              console.error("YouTube Player Error:", e.data);
-              // Error 150/101 often means embedding is restricted
+              console.warn("YouTube Player Error code:", e.data);
+              // 2: Invalid parameter (often bad ID)
+              // 5: HTML5 error
+              // 100: Video not found/deleted
+              // 101/150: Embedding not allowed
               ytReady = true; 
               resolve(ytPlayer); 
             } 
           }
         });
       };
+
       if (window.YT && window.YT.Player) { create(); return; }
-      const prev = window.onYouTubeIframeAPIReady;
-      window.onYouTubeIframeAPIReady = () => { if (prev) prev(); create(); };
-      const tag = document.createElement("script");
-      tag.src = "https://www.youtube.com/iframe_api";
-      document.head.appendChild(tag);
+      
+      // If API not loaded, set up callback and load script
+      window.onYouTubeIframeAPIReady = () => {
+        create();
+      };
+      
+      if (!document.querySelector('script[src*="youtube.com/iframe_api"]')) {
+        const tag = document.createElement("script");
+        tag.src = "https://www.youtube.com/iframe_api";
+        const firstScriptTag = document.getElementsByTagName("script")[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+      }
     });
   }
 
