@@ -69,7 +69,8 @@ The display reads one JSON object from `frontend/media.json` (or ultimately from
       "paystack_url": "https://paystack.com/pay/lipstick-001",
       "payment_status": "paid",
       "play_count": 2,
-      "status": "active"
+      "status": "active",
+      "orientation": "landscape"
     }
   ],
   "youtube_playlist_id": "YOUR_PLAYLIST_ID",
@@ -80,7 +81,7 @@ The display reads one JSON object from `frontend/media.json` (or ultimately from
 
 ### Field rules
 
-Each media record requires all fields shown above.
+All media fields shown above are required except `orientation`.
 
 | Field | Rule |
 | --- | --- |
@@ -89,8 +90,11 @@ Each media record requires all fields shown above.
 | `status` | Must be `active` to display |
 | `payment_status` | Must be `paid` to display |
 | `play_count` | Positive whole number |
+| `orientation` | Optional: `landscape`, `portrait`, or `square` |
 
-The backend and frontend ignore invalid entries individually. They use safe defaults of 30 seconds for advertisements and 10 minutes for YouTube if global durations are invalid.
+`orientation` describes the intended aspect ratio of an image or video. When omitted, existing media remains valid and keeps the original display behaviour. Landscape keeps the default cropped fill; portrait and square use a contained fit to avoid cropping. If supplied with any other value, that advert is ignored without stopping the display cycle.
+
+The backend and frontend ignore invalid entries individually. They use safe defaults of 30 seconds for advertisements and 10 minutes for YouTube if global durations are invalid. See [the API and data-contract documentation](docs/API.md) for the complete field reference, development API behaviour, error handling, and Spark/Zuke integration TBDs.
 
 ## Playback flow
 

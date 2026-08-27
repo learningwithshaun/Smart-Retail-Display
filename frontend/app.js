@@ -55,9 +55,10 @@
     }
   });
 
+  const ALLOWED_ORIENTATIONS = ["landscape", "portrait", "square"];
   const esc = (v) => String(v == null ? "" : v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   const validUrl = (value) => { try { new URL(value); return true; } catch (e) { return false; } };
-  const usable = (ad) => ad && ad.status === "active" && ad.payment_status === "paid" && ["image", "video"].includes(ad.media_type) && ["id", "business_id", "business_name", "name"].every((k) => typeof ad[k] === "string" && ad[k].trim()) && validUrl(ad.media_url) && validUrl(ad.paystack_url) && Number.isInteger(ad.play_count) && ad.play_count > 0;
+  const usable = (ad) => ad && ad.status === "active" && ad.payment_status === "paid" && ["image", "video"].includes(ad.media_type) && ["id", "business_id", "business_name", "name"].every((k) => typeof ad[k] === "string" && ad[k].trim()) && validUrl(ad.media_url) && validUrl(ad.paystack_url) && Number.isInteger(ad.play_count) && ad.play_count > 0 && (ad.orientation == null || ALLOWED_ORIENTATIONS.includes(ad.orientation));
   const positive = (value, fallback, maximum) => Number.isFinite(value) && value > 0 && value <= maximum ? value : fallback;
 
   function parse(payload) {
@@ -143,6 +144,7 @@
     elements.youtubeStage.classList.add("mini");
 
     elements.mediaStage.classList.remove("hidden");
+    elements.mediaStage.dataset.orientation = ad.orientation || "unspecified";
     elements.empty.classList.add("hidden");
     elements.caption.classList.remove("hidden");
     elements.payment.classList.remove("hidden");
@@ -168,11 +170,19 @@
       elements.image.classList.remove("hidden");
       elements.image.classList.add("image-zoom");
       elements.image.style.animationDuration = config.adDurationMs + "ms";
-      elements.image.onload = function onImgLoad() {
-        const ratio = (elements.image.naturalWidth && elements.image.naturalHeight) ? elements.image.naturalWidth / elements.image.naturalHeight : 1;
-        elements.image.classList.toggle("contain", ratio < 1.6);
+      if (ad.orientation === "portrait" || ad.orientation === "square") {
+        elements.image.classList.add("contain");
         elements.image.onload = null;
-      };
+      } else if (ad.orientation === "landscape") {
+        elements.image.classList.remove("contain");
+        elements.image.onload = null;
+      } else {
+        elements.image.onload = function onImgLoad() {
+          const ratio = (elements.image.naturalWidth && elements.image.naturalHeight) ? elements.image.naturalWidth / elements.image.naturalHeight : 1;
+          elements.image.classList.toggle("contain", ratio < 1.6);
+          elements.image.onload = null;
+        };
+      }
       elements.image.src = ad.media_url;
     }
 

@@ -4,6 +4,7 @@ from urllib.parse import urlparse
 
 REQUIRED_FIELDS = {"id", "business_id", "business_name", "type", "name", "media_type", "media_url", "paystack_url", "payment_status", "play_count", "status"}
 SUPPORTED_TYPES = {"image", "video"}
+ALLOWED_ORIENTATIONS = {"landscape", "portrait", "square"}
 DEFAULT_CONFIG = {"youtube_playlist_id": "", "ad_duration_seconds": 30, "youtube_duration_minutes": 10}
 
 
@@ -13,6 +14,9 @@ def is_http_url(value: object) -> bool:
 
 def is_valid_media(item: object) -> bool:
     if not isinstance(item, dict) or not REQUIRED_FIELDS.issubset(item):
+        return False
+    orientation = item.get("orientation")
+    if orientation is not None and orientation not in ALLOWED_ORIENTATIONS:
         return False
     return (
         item["status"] == "active" and item["payment_status"] == "paid" and item["media_type"] in SUPPORTED_TYPES
