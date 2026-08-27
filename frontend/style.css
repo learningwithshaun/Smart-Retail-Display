@@ -35,7 +35,7 @@ body { margin: 0; min-width: 320px; overflow: hidden; font-family: 'Hanken Grote
   width: 25vw;
   height: 25vh;
   left: auto;
-  top: 50%;
+  top: 35%; /* Moved up from 50% */
   right: 4vw;
   transform: translateY(-50%);
   z-index: 10;

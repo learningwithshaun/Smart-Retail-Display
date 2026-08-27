@@ -206,6 +206,8 @@
     return new Promise((resolve) => {
       if (ytReady && ytPlayer) return resolve(ytPlayer);
       const create = () => {
+        // Clear previous content to avoid iframe conflicts
+        elements.player.innerHTML = "";
         ytPlayer = new window.YT.Player(elements.player, {
           width: "100%", height: "100%",
           playerVars: { 
@@ -214,9 +216,22 @@
             playsinline: 1, 
             rel: 0, 
             modestbranding: 1,
-            origin: window.location.origin 
+            enablejsapi: 1,
+            origin: window.location.origin,
+            widget_referrer: window.location.href
           },
-          events: { onReady: () => { ytReady = true; resolve(ytPlayer); }, onError: () => { ytReady = true; resolve(ytPlayer); } }
+          events: { 
+            onReady: () => { 
+              ytReady = true; 
+              resolve(ytPlayer); 
+            }, 
+            onError: (e) => { 
+              console.error("YouTube Player Error:", e.data);
+              // Error 150/101 often means embedding is restricted
+              ytReady = true; 
+              resolve(ytPlayer); 
+            } 
+          }
         });
       };
       if (window.YT && window.YT.Player) { create(); return; }
@@ -237,7 +252,14 @@
   }
 
   function playPlaylist(listId) {
-    ytPlayer.loadPlaylist({ list: listId, listType: "playlist", index: 0 });
+    if (!ytPlayer || typeof ytPlayer.loadPlaylist !== "function") return;
+    
+    // Check if the listId is a video ID or a playlist ID
+    if (listId.length === 11) {
+      ytPlayer.loadVideoById(listId);
+    } else {
+      ytPlayer.loadPlaylist({ list: listId, listType: "playlist", index: 0 });
+    }
     ytPlayer.playVideo();
   }
 
@@ -285,9 +307,14 @@
       if (masterMuted) ytPlayer.mute();
       else if (ytPlayer.unMute) ytPlayer.unMute();
       
-      const state = ytPlayer.getPlayerState();
-      if (state !== 1 && state !== 3) {
-        if (config.shuffle && window.YOUTUBE_API_KEY) return playShuffled(ids);
+      try {
+        const state = ytPlayer.getPlayerState();
+        if (state !== 1 && state !== 3) {
+          if (config.shuffle && window.YOUTUBE_API_KEY) return playShuffled(ids);
+          if (ids.length) playPlaylist(ids[Math.floor(Math.random() * ids.length)]);
+        }
+      } catch (e) {
+        // If player isn't ready for getPlayerState, just force play
         if (ids.length) playPlaylist(ids[Math.floor(Math.random() * ids.length)]);
       }
       return undefined;
