@@ -144,6 +144,14 @@ This project is ready to be deployed to [Render](https://render.com/).
 
 The application will be available at your Render URL (e.g., `https://smart-retail-display.onrender.com`).
 
+### Deploying to Vercel
+
+1. Fork/Push this repository to GitHub.
+2. Connect the project to Vercel.
+3. Vercel will use `vercel.json` to route `/api` to the Python serverless function and serve the `frontend` statically.
+4. Add `PAYSTACK_SECRET_KEY` and `GPIO_MODE=mock` to your Vercel Environment Variables.
+
+
 ### Manual Docker Deployment
 
 If you want to run the container locally or on another cloud provider:
