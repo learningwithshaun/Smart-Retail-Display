@@ -5,7 +5,14 @@ from urllib.parse import urlparse
 REQUIRED_FIELDS = {"id", "business_id", "business_name", "type", "name", "media_type", "media_url", "paystack_url", "payment_status", "play_count", "status"}
 SUPPORTED_TYPES = {"image", "video"}
 ALLOWED_ORIENTATIONS = {"landscape", "portrait", "square"}
-DEFAULT_CONFIG = {"youtube_playlist_id": "", "ad_duration_seconds": 30, "youtube_duration_minutes": 10}
+ALLOWED_YOUTUBE_MODES = {"api", "normal", "both"}
+DEFAULT_CONFIG = {
+    "youtube_playlist_id": "",
+    "ad_duration_seconds": 30,
+    "youtube_duration_minutes": 10,
+    "youtube_mode": "both",
+    "youtube_api_key": "",
+}
 
 
 def is_http_url(value: object) -> bool:
@@ -30,7 +37,7 @@ def valid_number(value: object, default: int, maximum: int) -> int:
     return value if isinstance(value, int) and not isinstance(value, bool) and 0 < value <= maximum else default
 
 
-def load_media_configuration(media_file: Path) -> dict:
+def load_media_configuration(media_file: Path, default_mode: str = "both", default_api_key: str = "") -> dict:
     try:
         data = json.loads(media_file.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
@@ -38,9 +45,16 @@ def load_media_configuration(media_file: Path) -> dict:
     if not isinstance(data, dict):
         data = {}
     items = data.get("media", [])
+    mode = data.get("youtube_mode")
+    resolved_mode = mode.lower() if isinstance(mode, str) and mode.lower() in ALLOWED_YOUTUBE_MODES else default_mode
+    api_key = data.get("youtube_api_key")
+    resolved_api_key = api_key if isinstance(api_key, str) and api_key else default_api_key
+
     return {
         "media": [item for item in items if is_valid_media(item)] if isinstance(items, list) else [],
         "youtube_playlist_id": data.get("youtube_playlist_id") if isinstance(data.get("youtube_playlist_id"), str) else DEFAULT_CONFIG["youtube_playlist_id"],
         "ad_duration_seconds": valid_number(data.get("ad_duration_seconds"), DEFAULT_CONFIG["ad_duration_seconds"], 300),
         "youtube_duration_minutes": valid_number(data.get("youtube_duration_minutes"), DEFAULT_CONFIG["youtube_duration_minutes"], 120),
+        "youtube_mode": resolved_mode,
+        "youtube_api_key": resolved_api_key,
     }

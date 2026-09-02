@@ -1,4 +1,4 @@
-# Smart Retail Display & Shelf
+# Lumen
 
 An MVP digital-signage application for retail TVs. It consumes an advertising JSON contract, plays eligible image/video campaigns with a Paystack payment QR code, and switches to YouTube entertainment between advertising cycles.
 
@@ -118,9 +118,20 @@ pytest
 
 The suite covers media filtering/configuration fallback, webhook signature validation, product-to-pin mapping, and mock GPIO behavior. Browser timing, QR rendering, remote media availability, YouTube playback, and physical Raspberry Pi hardware must be verified in their target environments.
 
-## Environment and hardware note
+## Environment and configuration
 
-Keep `GPIO_MODE=mock` on a normal computer. The physical GPIO and Paystack webhook paths are retained from the earlier shelf prototype but are not required for the current display MVP. Do not commit `.env` or place secrets in `media.json`.
+Copy `.env.example` to `.env` to customize settings:
+
+- `GPIO_MODE`: `mock` (default for PC / cloud) or `real` (Raspberry Pi GPIO shelf).
+- `UNLOCK_DURATION_SECONDS`: GPIO pulse duration in seconds (default `5`).
+- `YOUTUBE_MODE`: Toggle YouTube playback mode:
+  - `normal`: Standard YouTube IFrame playlist/video embed (no API key required).
+  - `api`: YouTube Data API v3 (fetches playlist videos dynamically; requires `YOUTUBE_API_KEY`).
+  - `both` (default): Attempts YouTube Data API v3 first; automatically falls back to standard IFrame embed if the key is unset, exhausted, or encounters an error.
+- `YOUTUBE_API_KEY`: Optional YouTube Data API v3 key.
+- `PAYSTACK_SECRET_KEY`: Paystack secret key for the payment webhook prototype.
+
+Do not commit `.env` or place secrets in `media.json`.
 ## Deployment
 
 ### Deploying to Render
@@ -146,7 +157,7 @@ This project is ready to be deployed to [Render](https://render.com/).
    - `UNLOCK_DURATION_SECONDS`: `5`
    - `PAYSTACK_SECRET_KEY`: Your secret key from Paystack.
 
-The application will be available at your Render URL (e.g., `https://smart-retail-display.onrender.com`).
+The application will be available at your Render URL (e.g., `https://lumen.onrender.com`).
 
 ### Deploying to Vercel
 
@@ -161,8 +172,8 @@ The application will be available at your Render URL (e.g., `https://smart-retai
 If you want to run the container locally or on another cloud provider:
 
 ```bash
-docker build -t smart-retail-display .
-docker run -p 8000:8000 -e GPIO_MODE=mock smart-retail-display
+docker build -t lumen .
+docker run -p 8000:8000 -e GPIO_MODE=mock lumen
 ```
 
 ### Deploying to Vercel

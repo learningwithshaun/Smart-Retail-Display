@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: smart-retail-display
+    name: lumen
     runtime: docker
     plan: free
     envVars:

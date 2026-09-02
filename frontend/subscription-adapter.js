@@ -94,7 +94,7 @@
   /* Swap the adapter here when scaling. Overridable via global config so the
    * same deployment can flip transports without an app.js change.          */
   function createSubscriptionAdapter(opts) {
-    const kind = (opts && opts.adapter) || global.SMART_RETAIL_ADAPTER || "http";
+    const kind = (opts && opts.adapter) || global.LUMEN_ADAPTER || global.SMART_RETAIL_ADAPTER || "http";
     if (kind === "rabbitmq") return createRabbitMqAdapter(opts);
     return createHttpPollingAdapter(opts);
   }

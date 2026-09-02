@@ -1,8 +1,8 @@
-# Smart Retail Display API & Data Contract Documentation
+# Lumen API & Data Contract Documentation
 
 ## 1. API Overview
 
-The Smart Retail Display API is responsible for serving validated digital signage campaigns, scheduling parameters, and entertainment configuration to the display engine. The display engine consumes this data to render advertisement media (images and videos) alongside interactive Paystack payment QR codes and scheduled YouTube entertainment intervals.
+The Lumen API is responsible for serving validated digital signage campaigns, scheduling parameters, and entertainment configuration to the display engine. The display engine consumes this data to render advertisement media (images and videos) alongside interactive Paystack payment QR codes and scheduled YouTube entertainment intervals.
 
 ### Relationship Between Spark/Zuke Platform and the Display Engine
 
@@ -129,6 +129,8 @@ The media configuration is structured as a root JSON object containing a `media`
 | `youtube_playlist_id` | `string` | Optional | `""` | YouTube playlist/video ID for the entertainment intermission |
 | `ad_duration_seconds` | `integer` | Optional | `30` | Duration (in seconds) to show each individual ad slot (1–300s) |
 | `youtube_duration_minutes` | `integer` | Optional | `10` | Duration (in minutes) to run the YouTube intermission (1–120m) |
+| `youtube_mode` | `string` | Optional | `"both"` | Mode: `"api"` (YouTube Data API), `"normal"` (standard IFrame playlist embed), or `"both"` (API with embed fallback) |
+| `youtube_api_key` | `string` | Optional | `""` | Optional Google / YouTube Data API v3 key |
 
 ---
 

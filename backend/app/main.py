@@ -18,7 +18,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 def create_app(controller=None) -> FastAPI:
     if controller is None:
         controller = RealGPIOController() if settings.GPIO_MODE == "real" else MockGPIOController()
-    app = FastAPI(title="Smart Retail Display API", version="0.1.0")
+    app = FastAPI(title="Lumen API", version="0.1.0")
     
     # Enable CORS for zuke domains
     app.add_middleware(

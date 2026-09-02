@@ -1,7 +1,7 @@
 (() => {
   "use strict";
   const MAX_AD_CYCLE_MS = 5 * 60_000;
-  const DEFAULTS = { adDurationMs: 30_000, youtubeDurationMs: 10 * 60_000, playlistId: "", fallbackPlaylists: [], shuffle: false };
+  const DEFAULTS = { adDurationMs: 30_000, youtubeDurationMs: 10 * 60_000, playlistId: "", fallbackPlaylists: [], shuffle: false, youtubeMode: "both", apiKey: "" };
   const ZUKE_LOGO = "https://res.cloudinary.com/dekgwsl3c/image/upload/v1765557660/Wide_Logos_v2_Zuke_Logo_Wide_White_shv9wx.webp";
 
   const elements = {
@@ -63,12 +63,20 @@
 
   function parse(payload) {
     const data = payload && typeof payload === "object" && !Array.isArray(payload) ? payload : {};
+    const validModes = ["api", "normal", "both"];
+    const modeFromPayload = typeof data.youtube_mode === "string" ? data.youtube_mode.toLowerCase() : "";
+    const resolvedMode = validModes.includes(modeFromPayload) ? modeFromPayload : (window.YOUTUBE_MODE || "both");
+    const apiKeyFromPayload = typeof data.youtube_api_key === "string" ? data.youtube_api_key.trim() : "";
+    if (apiKeyFromPayload) window.YOUTUBE_API_KEY = apiKeyFromPayload;
+
     config = {
       adDurationMs: positive(data.ad_duration_seconds, 30, 300) * 1000,
       youtubeDurationMs: positive(data.youtube_duration_minutes, 10, 120) * 60_000,
       playlistId: typeof data.youtube_playlist_id === "string" ? data.youtube_playlist_id.trim() : "",
       fallbackPlaylists: Array.isArray(data.youtube_fallback_playlist_ids) ? data.youtube_fallback_playlist_ids.filter(Boolean) : [],
-      shuffle: !!data.youtube_shuffle
+      shuffle: !!data.youtube_shuffle,
+      youtubeMode: resolvedMode,
+      apiKey: apiKeyFromPayload || window.YOUTUBE_API_KEY || ""
     };
     const maxSlots = Math.max(1, Math.floor(MAX_AD_CYCLE_MS / config.adDurationMs));
     playlist = (Array.isArray(data.media) ? data.media : []).filter(usable)
@@ -242,11 +250,15 @@
               resolve(ytPlayer); 
             }, 
             onError: (e) => { 
-              console.warn("YouTube Player Error code:", e.data);
-              // 2: Invalid parameter (often bad ID)
-              // 5: HTML5 error
-              // 100: Video not found/deleted
-              // 101/150: Embedding not allowed
+              const errorMap = {
+                2: "Invalid video parameter or bad ID format.",
+                5: "HTML5 player error.",
+                100: "Video not found, removed, or marked private.",
+                101: "Video owner does not allow embedded playback.",
+                150: "Video owner does not allow embedded playback."
+              };
+              const msg = errorMap[e.data] || "Unknown player error code: " + e.data;
+              console.error("[YouTube Player Error " + e.data + "]:", msg);
               ytReady = true; 
               resolve(ytPlayer); 
             } 
@@ -270,12 +282,40 @@
     });
   }
 
-  // Fetch video IDs for a playlist via the YouTube Data API (only if a key is set).
+  // Fetch video IDs for a playlist via the YouTube Data API.
   function fetchPlaylistItems(pid) {
-    const apiKey = window.YOUTUBE_API_KEY;
-    if (!apiKey) return Promise.resolve([]);
+    const apiKey = config.apiKey || window.YOUTUBE_API_KEY;
+    if (!apiKey) {
+      const err = new Error("YOUTUBE_API_KEY is missing. Please set YOUTUBE_API_KEY in your .env file or configuration.");
+      console.error("[YouTube API Mode]", err.message);
+      return Promise.reject(err);
+    }
     const url = "https://www.googleapis.com/youtube/v3/playlistItems?part=contentDetails&maxResults=50&playlistId=" + encodeURIComponent(pid) + "&key=" + encodeURIComponent(apiKey);
-    return fetch(url).then((r) => r.json()).then((j) => (j && j.items || []).map((it) => it && it.contentDetails && it.contentDetails.videoId).filter(Boolean)).catch(() => []);
+    return fetch(url)
+      .then(async (r) => {
+        if (!r.ok) {
+          let errorDetails = "";
+          try {
+            const errJson = await r.json();
+            errorDetails = errJson.error ? (errJson.error.message || JSON.stringify(errJson.error)) : JSON.stringify(errJson);
+          } catch (e) {
+            errorDetails = "HTTP " + r.status + " " + r.statusText;
+          }
+          const err = new Error("YouTube API request failed (" + errorDetails + ")");
+          console.error("[YouTube API Mode]", err.message);
+          throw err;
+        }
+        return r.json();
+      })
+      .then((j) => {
+        const items = (j && j.items || []).map((it) => it && it.contentDetails && it.contentDetails.videoId).filter(Boolean);
+        if (!items.length) {
+          const err = new Error("No videos returned from YouTube Data API for playlist ID: " + pid);
+          console.error("[YouTube API Mode]", err.message);
+          throw err;
+        }
+        return items;
+      });
   }
 
   function playPlaylist(listId) {
@@ -290,14 +330,53 @@
     ytPlayer.playVideo();
   }
 
-  // Shuffle: pick a random playlist, fetch its videos (Data API), play a random video.
-  function playShuffled(ids) {
-    return fetchPlaylistItems(ids[Math.floor(Math.random() * ids.length)]).then((items) => {
-      if (!items.length) { playPlaylist(ids[Math.floor(Math.random() * ids.length)]); return; }
+  // Play using YouTube Data API
+  function playWithApi(listId) {
+    if (listId.length === 11) {
+      if (ytPlayer && typeof ytPlayer.loadVideoById === "function") {
+        ytPlayer.loadVideoById(listId);
+        ytPlayer.playVideo();
+        return Promise.resolve();
+      }
+      return Promise.reject(new Error("YouTube player not ready"));
+    }
+    return fetchPlaylistItems(listId).then((items) => {
       const chosen = items[Math.floor(Math.random() * items.length)];
-      ytPlayer.loadVideoById(chosen);
-      ytPlayer.playVideo();
-    }).catch(() => playPlaylist(ids[Math.floor(Math.random() * ids.length)]));
+      if (ytPlayer && typeof ytPlayer.loadVideoById === "function") {
+        ytPlayer.loadVideoById(chosen);
+        ytPlayer.playVideo();
+      }
+    });
+  }
+
+  // Unified YouTube playback router honoring youtubeMode ("api", "normal", "both")
+  function playYouTubeMedia() {
+    const ids = playlistIds();
+    if (!ids.length) {
+      console.warn("[YouTube] No playlist ID configured in media configuration.");
+      return;
+    }
+    const chosenListId = ids[Math.floor(Math.random() * ids.length)];
+
+    if (config.youtubeMode === "normal") {
+      playPlaylist(chosenListId);
+    } else if (config.youtubeMode === "api") {
+      // STRICT API MODE: No fallback to normal embed on error.
+      playWithApi(chosenListId).catch((err) => {
+        console.error("[YouTube API Mode Error] Strict API mode active — will NOT fallback to normal embed. Error:", err.message);
+      });
+    } else {
+      // "both" mode: Try API mode first if apiKey is present; fallback to normal embed on error
+      const apiKey = config.apiKey || window.YOUTUBE_API_KEY;
+      if (apiKey) {
+        playWithApi(chosenListId).catch((err) => {
+          console.warn("[YouTube Both Mode] API mode encountered an error, falling back to normal embed:", err.message);
+          playPlaylist(chosenListId);
+        });
+      } else {
+        playPlaylist(chosenListId);
+      }
+    }
   }
 
   function ensureYTPlaying() {
@@ -306,10 +385,7 @@
       const state = ytPlayer.getPlayerState();
       // If NOT playing (1) and NOT buffering (3), start playing.
       if (state !== 1 && state !== 3) {
-        const ids = playlistIds();
-        if (ids.length) {
-          playPlaylist(ids[Math.floor(Math.random() * ids.length)]);
-        }
+        playYouTubeMedia();
       }
     }).catch(() => {});
   }
@@ -320,7 +396,6 @@
   }
 
   function startEntertainment() {
-    const ids = playlistIds();
     hideMedia();
     elements.mediaStage.classList.add("hidden");
     elements.payment.classList.add("hidden");
@@ -337,12 +412,11 @@
       try {
         const state = ytPlayer.getPlayerState();
         if (state !== 1 && state !== 3) {
-          if (config.shuffle && window.YOUTUBE_API_KEY) return playShuffled(ids);
-          if (ids.length) playPlaylist(ids[Math.floor(Math.random() * ids.length)]);
+          playYouTubeMedia();
         }
       } catch (e) {
         // If player isn't ready for getPlayerState, just force play
-        if (ids.length) playPlaylist(ids[Math.floor(Math.random() * ids.length)]);
+        playYouTubeMedia();
       }
       return undefined;
     }).catch(() => {});

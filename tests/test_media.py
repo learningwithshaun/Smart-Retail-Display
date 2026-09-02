@@ -20,17 +20,58 @@ def test_media_endpoint_returns_only_active_paid_valid_adverts(tmp_path, monkeyp
     monkeypatch.setattr(media_route, "MEDIA_FILE", media_file)
     response = TestClient(create_app(MockGPIOController(sleep_fn=lambda _: None))).get("/api/media")
     assert response.status_code == 200
-    assert response.json() == {"media": [ad()], "youtube_playlist_id": "playlist", "ad_duration_seconds": 25, "youtube_duration_minutes": 10}
+    assert response.json() == {
+        "media": [ad()],
+        "youtube_playlist_id": "playlist",
+        "ad_duration_seconds": 25,
+        "youtube_duration_minutes": 10,
+        "youtube_mode": "both",
+        "youtube_api_key": "",
+    }
 
 
 def test_invalid_json_and_playback_config_fall_back_safely(tmp_path):
     media_file = tmp_path / "media.json"
     media_file.write_text("invalid", encoding="utf-8")
-    assert load_media_configuration(media_file) == {"media": [], "youtube_playlist_id": "", "ad_duration_seconds": 30, "youtube_duration_minutes": 10}
+    assert load_media_configuration(media_file) == {
+        "media": [],
+        "youtube_playlist_id": "",
+        "ad_duration_seconds": 30,
+        "youtube_duration_minutes": 10,
+        "youtube_mode": "both",
+        "youtube_api_key": "",
+    }
     media_file.write_text(json.dumps({"media": [], "ad_duration_seconds": 0, "youtube_duration_minutes": "ten"}), encoding="utf-8")
     result = load_media_configuration(media_file)
     assert result["ad_duration_seconds"] == 30
     assert result["youtube_duration_minutes"] == 10
+    assert result["youtube_mode"] == "both"
+
+
+def test_youtube_mode_toggle_and_api_key(tmp_path):
+    media_file = tmp_path / "media.json"
+    
+    # Test API mode
+    media_file.write_text(json.dumps({"youtube_mode": "api", "youtube_api_key": "AIzaSyTest"}), encoding="utf-8")
+    res_api = load_media_configuration(media_file)
+    assert res_api["youtube_mode"] == "api"
+    assert res_api["youtube_api_key"] == "AIzaSyTest"
+
+    # Test Normal mode
+    media_file.write_text(json.dumps({"youtube_mode": "normal"}), encoding="utf-8")
+    res_normal = load_media_configuration(media_file)
+    assert res_normal["youtube_mode"] == "normal"
+    assert res_normal["youtube_api_key"] == ""
+
+    # Test Both mode
+    media_file.write_text(json.dumps({"youtube_mode": "both"}), encoding="utf-8")
+    res_both = load_media_configuration(media_file)
+    assert res_both["youtube_mode"] == "both"
+
+    # Test invalid mode fallback to default
+    media_file.write_text(json.dumps({"youtube_mode": "invalid_mode"}), encoding="utf-8")
+    res_fallback = load_media_configuration(media_file, default_mode="normal")
+    assert res_fallback["youtube_mode"] == "normal"
 
 
 def test_media_orientation_optional_and_supported_values(tmp_path):
@@ -80,3 +121,4 @@ def test_media_endpoint_with_orientations(tmp_path, monkeypatch):
         ad(id="m3", orientation="portrait"),
         ad(id="m4", orientation="square"),
     ]
+
