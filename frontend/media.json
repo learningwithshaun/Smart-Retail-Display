@@ -1,10 +1,28 @@
 {
+  "schedule": {
+    "morning": {
+      "start": "09:00",
+      "end": "11:30"
+    },
+    "afternoon": {
+      "start": "11:30",
+      "end": "18:00"
+    },
+    "evening": {
+      "start": "18:00",
+      "end": "21:00"
+    }
+  },
+  "ad_duration_seconds": 30,
+  "youtube_duration_minutes": 10,
+  "youtube_playlist_id": "PLFgquLnL59alCl_2TQvOiD5Vgm1hCaGSI",
   "media": [
     {
       "id": "media_001",
       "business_id": "business_001",
       "business_name": "GrowthPilot",
       "type": "product",
+      "category": "marketing",
       "name": "Search Engine Optimization",
       "media_type": "image",
       "media_url": "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1920&q=85",
@@ -12,13 +30,15 @@
       "payment_status": "paid",
       "play_count": 2,
       "status": "active",
-      "orientation": "landscape"
+      "orientation": "landscape",
+      "time": "morning"
     },
     {
       "id": "media_002",
       "business_id": "business_002",
       "business_name": "RankNow Agency",
       "type": "product",
+      "category": "marketing",
       "name": "SEO Starter Pack",
       "media_type": "image",
       "media_url": "https://images.unsplash.com/photo-1499951360447-b19be8fe80f5?auto=format&fit=crop&w=1920&q=85",
@@ -26,13 +46,15 @@
       "payment_status": "paid",
       "play_count": 1,
       "status": "active",
-      "orientation": "portrait"
+      "orientation": "portrait",
+      "time": "afternoon"
     },
     {
       "id": "media_003",
       "business_id": "business_003",
       "business_name": "SearchFirst",
       "type": "product",
+      "category": "education",
       "name": "Keyword Mastery",
       "media_type": "video",
       "media_url": "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
@@ -40,26 +62,30 @@
       "payment_status": "paid",
       "play_count": 1,
       "status": "active",
-      "orientation": "square"
+      "orientation": "square",
+      "time": "evening"
     },
     {
       "id": "media_004",
       "business_id": "business_004",
       "business_name": "Traffic Lab",
       "type": "product",
+      "category": "marketing",
       "name": "Local SEO Boost",
       "media_type": "image",
       "media_url": "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&w=1920&q=85",
       "paystack_url": "https://paystack.com/buy/search-engine-optimization-seo-vhraqr",
       "payment_status": "paid",
       "play_count": 1,
-      "status": "active"
+      "status": "active",
+      "time": "all"
     },
     {
       "id": "media_005",
       "business_id": "business_005",
       "business_name": "BrightRank",
       "type": "product",
+      "category": "marketing",
       "name": "Conversion SEO Plan",
       "media_type": "image",
       "media_url": "https://images.unsplash.com/photo-1432888622747-4eb9a8efeb07?auto=format&fit=crop&w=1920&q=85",
@@ -67,10 +93,8 @@
       "payment_status": "paid",
       "play_count": 1,
       "status": "active",
-      "orientation": "landscape"
+      "orientation": "landscape",
+      "time": "morning"
     }
-  ],
-  "youtube_playlist_id": "PLFgquLnL59alCl_2TQvOiD5Vgm1hCaGSI",
-  "ad_duration_seconds": 30,
-  "youtube_duration_minutes": 10
+  ]
 }

@@ -1,7 +1,21 @@
 (() => {
   "use strict";
   const MAX_AD_CYCLE_MS = 5 * 60_000;
-  const DEFAULTS = { adDurationMs: 30_000, youtubeDurationMs: 10 * 60_000, playlistId: "", fallbackPlaylists: [], shuffle: false, youtubeMode: "both", apiKey: "" };
+  const DEFAULT_SCHEDULE = {
+    morning: { start: "09:00", end: "11:30" },
+    afternoon: { start: "11:30", end: "18:00" },
+    evening: { start: "18:00", end: "21:00" }
+  };
+  const DEFAULTS = {
+    adDurationMs: 30_000,
+    youtubeDurationMs: 10 * 60_000,
+    playlistId: "",
+    fallbackPlaylists: [],
+    shuffle: false,
+    youtubeMode: "both",
+    apiKey: "",
+    schedule: DEFAULT_SCHEDULE
+  };
   const ZUKE_LOGO = "https://res.cloudinary.com/dekgwsl3c/image/upload/v1765557660/Wide_Logos_v2_Zuke_Logo_Wide_White_shv9wx.webp";
 
   const elements = {
@@ -23,9 +37,10 @@
     muteIconOff: document.querySelector("#mute-icon-off")
   };
 
-  let timeoutId, playlist = [], index = 0, config = { ...DEFAULTS };
+  let timeoutId, playlist = [], rawMediaList = [], index = 0, lastPlayedAdId = null, config = { ...DEFAULTS };
   let store = { content: null, hasZuke: false };
   let ytPlayer = null, ytReady = false, masterMuted = localStorage.getItem("masterMuted") === "true";
+  const ytVideoQueues = {};
 
   function updateMuteUI() {
     if (masterMuted) {
@@ -61,6 +76,96 @@
   const usable = (ad) => ad && ad.status === "active" && ad.payment_status === "paid" && ["image", "video"].includes(ad.media_type) && ["id", "business_id", "business_name", "name"].every((k) => typeof ad[k] === "string" && ad[k].trim()) && validUrl(ad.media_url) && validUrl(ad.paystack_url) && Number.isInteger(ad.play_count) && ad.play_count > 0 && (ad.orientation == null || ALLOWED_ORIENTATIONS.includes(ad.orientation));
   const positive = (value, fallback, maximum) => Number.isFinite(value) && value > 0 && value <= maximum ? value : fallback;
 
+  function validateSchedule(rawSchedule) {
+    if (!rawSchedule || typeof rawSchedule !== "object" || Array.isArray(rawSchedule)) return DEFAULT_SCHEDULE;
+    const result = {};
+    for (const [key, val] of Object.entries(rawSchedule)) {
+      if (typeof key === "string" && key.trim() && val && typeof val === "object" && typeof val.start === "string" && typeof val.end === "string") {
+        result[key.trim()] = { start: val.start.trim(), end: val.end.trim() };
+      }
+    }
+    return Object.keys(result).length ? result : DEFAULT_SCHEDULE;
+  }
+
+  function getCurrentTimeSlot(schedule) {
+    if (!schedule || typeof schedule !== "object") return null;
+    const now = new Date();
+    const currentMins = now.getHours() * 60 + now.getMinutes();
+
+    for (const [slotName, range] of Object.entries(schedule)) {
+      if (!range || typeof range.start !== "string" || typeof range.end !== "string") continue;
+      const [sH, sM] = range.start.split(":").map(Number);
+      const [eH, eM] = range.end.split(":").map(Number);
+      if (Number.isNaN(sH) || Number.isNaN(sM) || Number.isNaN(eH) || Number.isNaN(eM)) continue;
+
+      const startTotal = sH * 60 + sM;
+      const endTotal = eH * 60 + eM;
+
+      if (startTotal <= endTotal) {
+        if (currentMins >= startTotal && currentMins < endTotal) {
+          return slotName.toLowerCase();
+        }
+      } else {
+        // Overnight wrap-around slot (e.g. 22:00 to 04:00)
+        if (currentMins >= startTotal || currentMins < endTotal) {
+          return slotName.toLowerCase();
+        }
+      }
+    }
+    return null;
+  }
+
+  function getEligibleMedia(mediaList, schedule) {
+    const usableAds = (Array.isArray(mediaList) ? mediaList : []).filter(usable);
+    if (!usableAds.length) return [];
+
+    const currentSlot = getCurrentTimeSlot(schedule);
+    if (!currentSlot) return usableAds;
+
+    const slotMatched = usableAds.filter((ad) => {
+      if (!ad.time || typeof ad.time !== "string" || !ad.time.trim()) return true;
+      const t = ad.time.trim().toLowerCase();
+      return t === "all" || t === currentSlot;
+    });
+
+    return slotMatched.length ? slotMatched : usableAds;
+  }
+
+  function shuffleArray(arr) {
+    const copy = [...arr];
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const temp = copy[i];
+      copy[i] = copy[j];
+      copy[j] = temp;
+    }
+    return copy;
+  }
+
+  function buildCyclePlaylist(mediaList, cfg, maxAdCycleMs) {
+    const eligible = getEligibleMedia(mediaList, cfg.schedule);
+    if (!eligible.length) return [];
+
+    const maxSlots = Math.max(1, Math.floor(maxAdCycleMs / cfg.adDurationMs));
+    let pool = eligible.flatMap((ad) =>
+      Array.from({ length: Math.min(ad.play_count || 1, maxSlots) }, () => ad)
+    );
+
+    pool = shuffleArray(pool);
+
+    const uniqueAdIds = new Set(pool.map((a) => a.id));
+    if (uniqueAdIds.size > 1 && lastPlayedAdId && pool[0] && pool[0].id === lastPlayedAdId) {
+      const swapIdx = pool.findIndex((a) => a.id !== lastPlayedAdId);
+      if (swapIdx > 0) {
+        const temp = pool[0];
+        pool[0] = pool[swapIdx];
+        pool[swapIdx] = temp;
+      }
+    }
+
+    return pool.slice(0, maxSlots);
+  }
+
   function parse(payload) {
     const data = payload && typeof payload === "object" && !Array.isArray(payload) ? payload : {};
     const validModes = ["api", "normal", "both"];
@@ -76,11 +181,11 @@
       fallbackPlaylists: Array.isArray(data.youtube_fallback_playlist_ids) ? data.youtube_fallback_playlist_ids.filter(Boolean) : [],
       shuffle: !!data.youtube_shuffle,
       youtubeMode: resolvedMode,
-      apiKey: apiKeyFromPayload || window.YOUTUBE_API_KEY || ""
+      apiKey: apiKeyFromPayload || window.YOUTUBE_API_KEY || "",
+      schedule: validateSchedule(data.schedule)
     };
-    const maxSlots = Math.max(1, Math.floor(MAX_AD_CYCLE_MS / config.adDurationMs));
-    playlist = (Array.isArray(data.media) ? data.media : []).filter(usable)
-      .flatMap((ad) => Array.from({ length: Math.min(ad.play_count, maxSlots) }, () => ad)).slice(0, maxSlots);
+    rawMediaList = Array.isArray(data.media) ? data.media : [];
+    playlist = buildCyclePlaylist(rawMediaList, config, MAX_AD_CYCLE_MS);
   }
 
 
@@ -145,6 +250,7 @@
   function showAd() {
     if (!playlist.length) return showEmpty();
     const ad = playlist[index];
+    lastPlayedAdId = ad.id;
     renderBrand(ad);
 
     // Keep YouTube stage visible but in mini mode
@@ -341,7 +447,10 @@
       return Promise.reject(new Error("YouTube player not ready"));
     }
     return fetchPlaylistItems(listId).then((items) => {
-      const chosen = items[Math.floor(Math.random() * items.length)];
+      if (!ytVideoQueues[listId] || !ytVideoQueues[listId].length) {
+        ytVideoQueues[listId] = shuffleArray(items);
+      }
+      const chosen = ytVideoQueues[listId].pop();
       if (ytPlayer && typeof ytPlayer.loadVideoById === "function") {
         ytPlayer.loadVideoById(chosen);
         ytPlayer.playVideo();
@@ -429,6 +538,7 @@
     index = 0;
     // Don't hide YouTube here, just load media and show ads
     await loadMedia();
+    playlist = buildCyclePlaylist(rawMediaList, config, MAX_AD_CYCLE_MS);
     showAd();
   }
 

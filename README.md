@@ -57,12 +57,18 @@ The display reads one JSON object from `frontend/media.json` (or ultimately from
 
 ```json
 {
+  "schedule": {
+    "morning": { "start": "09:00", "end": "11:30" },
+    "afternoon": { "start": "11:30", "end": "18:00" },
+    "evening": { "start": "18:00", "end": "21:00" }
+  },
   "media": [
     {
       "id": "media_001",
       "business_id": "business_001",
       "business_name": "Amanda Cosmetics",
       "type": "product",
+      "category": "beauty",
       "name": "Premium Lipstick Collection",
       "media_type": "image",
       "media_url": "https://cdn.example.com/lipstick.jpg",
@@ -70,7 +76,8 @@ The display reads one JSON object from `frontend/media.json` (or ultimately from
       "payment_status": "paid",
       "play_count": 2,
       "status": "active",
-      "orientation": "landscape"
+      "orientation": "landscape",
+      "time": "morning"
     }
   ],
   "youtube_playlist_id": "YOUR_PLAYLIST_ID",
@@ -81,7 +88,7 @@ The display reads one JSON object from `frontend/media.json` (or ultimately from
 
 ### Field rules
 
-All media fields shown above are required except `orientation`.
+All media fields shown above are required except `orientation`, `category`, and `time`.
 
 | Field | Rule |
 | --- | --- |
@@ -91,20 +98,24 @@ All media fields shown above are required except `orientation`.
 | `payment_status` | Must be `paid` to display |
 | `play_count` | Positive whole number |
 | `orientation` | Optional: `landscape`, `portrait`, or `square` |
+| `category` | Optional string categorizing the campaign (e.g. `beauty`, `tech`, `food`) |
+| `time` | Optional time slot targeting: `morning`, `afternoon`, `evening`, or `all` |
+| `schedule` | Optional root object defining time windows (`morning`, `afternoon`, `evening`) |
 
 `orientation` describes the intended aspect ratio of an image or video. When omitted, existing media remains valid and keeps the original display behaviour. Landscape keeps the default cropped fill; portrait and square use a contained fit to avoid cropping. If supplied with any other value, that advert is ignored without stopping the display cycle.
 
-The backend and frontend ignore invalid entries individually. They use safe defaults of 30 seconds for advertisements and 10 minutes for YouTube if global durations are invalid. See [the API and data-contract documentation](docs/API.md) for the complete field reference, development API behaviour, error handling, and Spark/Zuke integration TBDs.
+The backend and frontend ignore invalid entries individually. They use safe defaults of 30 seconds for advertisements, 10 minutes for YouTube, and standard morning/afternoon/evening time slots if global durations or schedules are invalid. See [the API and data-contract documentation](docs/API.md) for the complete field reference, development API behaviour, error handling, and Spark/Zuke integration TBDs.
 
 ## Playback flow
 
 1. Load and validate the JSON configuration.
-2. Filter to complete, active, paid campaigns.
-3. Expand each advert according to `play_count`.
-4. Limit the expanded advertising playlist to five minutes.
-5. Play each image/video for `ad_duration_seconds` and generate a QR code encoding exactly its `paystack_url`.
-6. Play the configured YouTube playlist for `youtube_duration_minutes`.
-7. Reload the media configuration and repeat.
+2. Filter to complete, active, paid campaigns matching the current time slot (or all-day).
+3. Expand each eligible advert according to `play_count`.
+4. Apply Fisher-Yates deck shuffle to randomize rotation and prevent consecutive repetitions across cycles and days.
+5. Limit the expanded advertising playlist to five minutes.
+6. Play each image/video for `ad_duration_seconds` and generate a QR code encoding exactly its `paystack_url`.
+7. Play the configured YouTube entertainment intermission for `youtube_duration_minutes` (non-repeating video queue in API mode).
+8. Reload the media configuration and repeat.
 
 `play_count` is deliberately used instead of advertising slots: it is simple, explicit, and easy for Spark/Zuke to generate without introducing an auction or scheduling system.
 

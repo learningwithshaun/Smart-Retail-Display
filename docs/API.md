@@ -121,11 +121,14 @@ The media configuration is structured as a root JSON object containing a `media`
 | `play_count` | `integer` | **Required** | Frequency weighting multiplier (positive integer >= 1) | `2` |
 | `status` | `string` | **Required** | Lifecycle status; must be `"active"` to display | `"active"` |
 | `orientation` | `string` | **Optional** | Target visual orientation (`"landscape"`, `"portrait"`, `"square"`) | `"landscape"` |
+| `category` | `string` | **Optional** | Content industry or category tag | `"beauty"` |
+| `time` | `string` | **Optional** | Target time slot: `"morning"`, `"afternoon"`, `"evening"`, or `"all"` | `"morning"` |
 
 ### Root Configuration Fields
 
 | Field | Type | Requirement | Default | Purpose |
 | --- | --- | --- | --- | --- |
+| `schedule` | `object` | Optional | Morning: 09:00-11:30, Afternoon: 11:30-18:00, Evening: 18:00-21:00 | Time window boundaries for ad slot matching |
 | `youtube_playlist_id` | `string` | Optional | `""` | YouTube playlist/video ID for the entertainment intermission |
 | `ad_duration_seconds` | `integer` | Optional | `30` | Duration (in seconds) to show each individual ad slot (1–300s) |
 | `youtube_duration_minutes` | `integer` | Optional | `10` | Duration (in minutes) to run the YouTube intermission (1–120m) |

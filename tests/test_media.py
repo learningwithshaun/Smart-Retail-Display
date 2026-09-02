@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 
 from backend.app.main import create_app
 from backend.app.routes import media as media_route
-from backend.app.services.media_service import load_media_configuration
+from backend.app.services.media_service import DEFAULT_SCHEDULE, load_media_configuration
 from hardware.mock_gpio_controller import MockGPIOController
 
 
@@ -27,6 +27,7 @@ def test_media_endpoint_returns_only_active_paid_valid_adverts(tmp_path, monkeyp
         "youtube_duration_minutes": 10,
         "youtube_mode": "both",
         "youtube_api_key": "",
+        "schedule": DEFAULT_SCHEDULE,
     }
 
 
@@ -40,12 +41,14 @@ def test_invalid_json_and_playback_config_fall_back_safely(tmp_path):
         "youtube_duration_minutes": 10,
         "youtube_mode": "both",
         "youtube_api_key": "",
+        "schedule": DEFAULT_SCHEDULE,
     }
     media_file.write_text(json.dumps({"media": [], "ad_duration_seconds": 0, "youtube_duration_minutes": "ten"}), encoding="utf-8")
     result = load_media_configuration(media_file)
     assert result["ad_duration_seconds"] == 30
     assert result["youtube_duration_minutes"] == 10
     assert result["youtube_mode"] == "both"
+    assert result["schedule"] == DEFAULT_SCHEDULE
 
 
 def test_youtube_mode_toggle_and_api_key(tmp_path):
@@ -121,4 +124,25 @@ def test_media_endpoint_with_orientations(tmp_path, monkeypatch):
         ad(id="m3", orientation="portrait"),
         ad(id="m4", orientation="square"),
     ]
+
+
+def test_custom_schedule_and_media_category_time(tmp_path):
+    media_file = tmp_path / "media.json"
+    custom_schedule = {
+        "morning": {"start": "08:00", "end": "12:00"},
+        "afternoon": {"start": "12:00", "end": "17:00"},
+        "evening": {"start": "17:00", "end": "22:00"},
+    }
+    ad_with_time = ad(id="m_time", time="morning", category="beauty")
+    ad_with_invalid_time = ad(id="m_inv_time", time="")
+    ad_with_invalid_category = ad(id="m_inv_cat", category=123)
+    payload = {
+        "schedule": custom_schedule,
+        "media": [ad_with_time, ad_with_invalid_time, ad_with_invalid_category],
+    }
+    media_file.write_text(json.dumps(payload), encoding="utf-8")
+    result = load_media_configuration(media_file)
+    assert result["schedule"] == custom_schedule
+    assert result["media"] == [ad_with_time]
+
 
